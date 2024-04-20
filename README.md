@@ -22,6 +22,9 @@ Table of contents:
 >
 > - You have to set your hostname with the format of {username}-host, if your login is potato, then your hostname must be potato-host.
 
+![partition example](img/partition-example.png)
+_current partitions for Mac OS_
+
 ## The Network Part
 
 1. `sudo vim /etc/netplan/config-file.yaml`
@@ -60,6 +63,7 @@ PubkeyAuthentication yes
 
 `sudo chsh nami` `/sbin/nologin`
 ![vsftpd-config](img/vsftpd-example.png)
+_FTP configuration for nami_
 
 ## The Database Part
 
