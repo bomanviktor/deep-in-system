@@ -29,23 +29,23 @@ _current partitions for Mac OS_
 
 ## The Network Part
 
-1. `sudo vim /etc/netplan/config-file.yaml`
-   ![netplan example config](img/netplan-example.png)
-   _example config_
+1.  Run `./configure_netplan.sh` to create a new netplan with the given default gateway
+    ![netplan example config](img/netplan-example.png)
 
-2. `sudo netplan apply`
-
-3. `sudo ufw enable`
-
-4. `sudo ufw allow 2222`
+2.  Run `./configure_ufw.sh` to enable the firewall and add rules for port 20, 21, 80, 443 and 2222
 
 ## The Security Part
 
-`sudo vim /etc/ssh/sshd_config`
+Run `./configure_ssh.sh` to configure `/etc/ssh/sshd_config`. These lines will be changed to following:
 
 ```
+# New port
 Port 2222
+
+# Disable root login
 PermitRootLogin no
+
+# Enable public ssh key authentication
 PubkeyAuthentication yes
 ```
 
@@ -62,7 +62,7 @@ _In the VM:_
 
 _In the host machine, run the provided script in `/scripts`:_
 
-- `./scripts/ssh.sh`
+- `./create_ssh_key.sh`
   > This will create the ssh key and add it to the user
 
 ### zoro
@@ -72,13 +72,24 @@ _In the host machine, run the provided script in `/scripts`:_
 
 ## The Services Part
 
-`add-shell /sbin/nologin`
+1. Download vsftpd: `sudo apt install vsftpd`
 
-`sudo adduser nami`
+2. Add the /nologin shell to available shells
 
-`sudo chsh nami` `/sbin/nologin`
-![vsftpd-config](img/vsftpd-example.png)
-_FTP configuration for nami_
+   `add-shell /sbin/nologin`
+
+3. Add user nami
+   `sudo adduser nami`
+
+4. Change shell to /nologin
+   `sudo chsh nami /sbin/nologin`
+
+5. Add these settings to lock nami to /backup
+
+   ![vsftpd-config](img/vsftpd-example.png)
+   _FTP configuration for nami_
+
+6. Restart vsftpd to apply changes `sudo systemctl restart vsftpd`
 
 ## The Database Part
 
@@ -97,6 +108,8 @@ _FTP configuration for nami_
 
    FLUSH PRIVILEGES;
    ```
+
+   > This will disable remote root access to the database
 
 3. Create the wordpress DB
 
@@ -123,6 +136,8 @@ _FTP configuration for nami_
       FLUSH PRIVILEGES;
    ```
 
+   > This will grant all processing privileges to the wordpress user. This is needed to backup the DB.
+
 6. Disallow connections to MySQL from outside the server
 
    - `sudo vim /etc/mysql/mysql.conf.d/mysqld.conf`
@@ -134,6 +149,8 @@ _FTP configuration for nami_
    `sudo systemctl restart mysql`
 
 ## The WordPress Part
+
+1. Install all dependencies
 
 ```sh
 sudo apt update
@@ -154,27 +171,33 @@ sudo apt install apache2 \
 
 ```
 
+2. Download the latest version of WordPress and extract it to /srv/www
+
 ```sh
 sudo mkdir -p /srv/www
 sudo chown www-data: /srv/www
 curl https://wordpress.org/latest.tar.gz | sudo -u www-data tar zx -C /srv/www
 ```
 
-```xml
-<VirtualHost *:80>
-    DocumentRoot /srv/www/wordpress
-    <Directory /srv/www/wordpress>
-        Options FollowSymLinks
-        AllowOverride Limit Options FileInfo
-        DirectoryIndex index.php
-        Require all granted
-    </Directory>
-    <Directory /srv/www/wordpress/wp-content>
-        Options FollowSymLinks
-        Require all granted
-    </Directory>
-</VirtualHost>
-```
+3. Configure Apache for WordPress
+
+- Add this wordpress.conf to /etc/apache/sites-available
+
+  ```xml
+  <VirtualHost *:80>
+      DocumentRoot /srv/www/wordpress
+      <Directory /srv/www/wordpress>
+          Options FollowSymLinks
+          AllowOverride Limit Options FileInfo
+          DirectoryIndex index.php
+          Require all granted
+      </Directory>
+      <Directory /srv/www/wordpress/wp-content>
+          Options FollowSymLinks
+          Require all granted
+      </Directory>
+  </VirtualHost>
+  ```
 
 - Enable WordPress
 
@@ -229,7 +252,7 @@ curl https://wordpress.org/latest.tar.gz | sudo -u www-data tar zx -C /srv/www
 
 ## The Backup Part
 
-### Setting up the cronjob
+1. Setting up the cronjob
 
 Set up the cronjob with: `crontab -e`
 
@@ -240,10 +263,12 @@ Set up the cronjob with: `crontab -e`
 
 _The contents of the backup script is located inside /scripts/wordpress_backup.sh_
 
-### Accessing the backup
+2. Accessing the backup
 
-Use `ftp viktor-host` and log in with the nami user.
+Use `ftp <host-addr> <port(optional)>` and log in with the nami user.
 
 Download the backup with `get <name-of-backup>`
 
-## The Bonus Part
+## Final words
+
+The sha1 checksum is located in `deep-in-system.sha1`
